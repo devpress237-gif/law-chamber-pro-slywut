@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
 import { router } from 'expo-router';
+import { Header } from '@/components/Header';
 import { CaseCard } from '@/components/CaseCard';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors, commonStyles } from '@/styles/commonStyles';
@@ -51,31 +52,37 @@ export default function CasesScreen() {
         />
       </View>
       
-      <FlatList
-        horizontal
+      <ScrollView 
+        horizontal 
         showsHorizontalScrollIndicator={false}
-        data={statusOptions}
-        keyExtractor={(item) => item.key}
         contentContainerStyle={styles.filtersContainer}
-        renderItem={({ item }) => (
+      >
+        {statusOptions.map((item) => (
           <Pressable
+            key={item.key}
             style={[
               styles.filterButton,
-              selectedStatus === item.key && { backgroundColor: item.color + '20', borderColor: item.color }
+              selectedStatus === item.key && { 
+                backgroundColor: item.color + '20', 
+                borderColor: item.color 
+              }
             ]}
             onPress={() => setSelectedStatus(item.key)}
           >
             <Text
               style={[
                 styles.filterText,
-                selectedStatus === item.key && { color: item.color, fontWeight: '600' }
+                selectedStatus === item.key && { 
+                  color: item.color, 
+                  fontWeight: '600' 
+                }
               ]}
             >
               {item.label}
             </Text>
           </Pressable>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 
@@ -98,6 +105,8 @@ export default function CasesScreen() {
 
   return (
     <View style={commonStyles.container}>
+      <Header title="Cases" />
+      
       <FlatList
         data={filteredCases}
         renderItem={renderCase}

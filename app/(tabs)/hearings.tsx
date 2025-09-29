@@ -1,17 +1,18 @@
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Pressable } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { HearingCard } from '@/components/HearingCard';
+import { Header } from '@/components/Header';
+import { CaseFolderCard } from '@/components/CaseFolderCard';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors, commonStyles } from '@/styles/commonStyles';
 import { useCases } from '@/hooks/useCases';
-import { Hearing, Case } from '@/types';
+import { Case } from '@/types';
 
 type HearingFilter = 'all' | 'today' | 'tomorrow' | 'upcoming' | 'past';
 
 export default function HearingsScreen() {
-  const { cases, getTodayHearings, getTomorrowHearings } = useCases();
+  const { cases } = useCases();
   const [selectedFilter, setSelectedFilter] = useState<HearingFilter>('all');
 
   const filterOptions: Array<{ key: HearingFilter; label: string; color: string }> = [
@@ -22,83 +23,96 @@ export default function HearingsScreen() {
     { key: 'past', label: 'Past', color: colors.textSecondary },
   ];
 
-  const getAllHearings = (): Array<Hearing & { case: Case }> => {
-    return cases.flatMap(caseItem => 
-      caseItem.hearings.map(hearing => ({ ...hearing, case: caseItem }))
-    );
-  };
-
-  const getFilteredHearings = () => {
-    const allHearings = getAllHearings();
+  const getFilteredCases = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    switch (selectedFilter) {
-      case 'today':
-        return getTodayHearings();
-      case 'tomorrow':
-        return getTomorrowHearings();
-      case 'upcoming':
-        return allHearings.filter(h => new Date(h.date) > tomorrow);
-      case 'past':
-        return allHearings.filter(h => new Date(h.date) < today);
-      default:
-        return allHearings;
-    }
+    return cases.filter(caseItem => {
+      const caseHearings = caseItem.hearings;
+      
+      switch (selectedFilter) {
+        case 'today':
+          return caseHearings.some(h => {
+            const hearingDate = new Date(h.date);
+            return hearingDate >= today && hearingDate < tomorrow;
+          });
+        case 'tomorrow':
+          const dayAfterTomorrow = new Date(tomorrow);
+          dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+          return caseHearings.some(h => {
+            const hearingDate = new Date(h.date);
+            return hearingDate >= tomorrow && hearingDate < dayAfterTomorrow;
+          });
+        case 'upcoming':
+          return caseHearings.some(h => new Date(h.date) > tomorrow);
+        case 'past':
+          return caseHearings.some(h => new Date(h.date) < today);
+        default:
+          return caseHearings.length > 0;
+      }
+    });
   };
 
-  const filteredHearings = getFilteredHearings().sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const filteredCases = getFilteredCases();
 
-  const renderHearing = ({ item }: { item: Hearing & { case: Case } }) => (
-    <HearingCard
-      hearing={item}
-      showCaseInfo={true}
-      onPress={() => router.push(`/hearing/${item.id}`)}
-    />
-  );
+  const renderCaseFolder = ({ item }: { item: Case }) => {
+    const hearingsCount = item.hearings.length;
+    return (
+      <CaseFolderCard
+        case={item}
+        type="hearings"
+        count={hearingsCount}
+        onPress={() => router.push(`/case-hearings/${item.id}`)}
+      />
+    );
+  };
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <FlatList
-        horizontal
+    <View style={styles.filtersSection}>
+      <ScrollView 
+        horizontal 
         showsHorizontalScrollIndicator={false}
-        data={filterOptions}
-        keyExtractor={(item) => item.key}
         contentContainerStyle={styles.filtersContainer}
-        renderItem={({ item }) => (
+      >
+        {filterOptions.map((item) => (
           <Pressable
+            key={item.key}
             style={[
               styles.filterButton,
-              selectedFilter === item.key && { backgroundColor: item.color + '20', borderColor: item.color }
+              selectedFilter === item.key && { 
+                backgroundColor: item.color + '20', 
+                borderColor: item.color 
+              }
             ]}
             onPress={() => setSelectedFilter(item.key)}
           >
             <Text
               style={[
                 styles.filterText,
-                selectedFilter === item.key && { color: item.color, fontWeight: '600' }
+                selectedFilter === item.key && { 
+                  color: item.color, 
+                  fontWeight: '600' 
+                }
               ]}
             >
               {item.label}
             </Text>
           </Pressable>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <IconSymbol name="calendar" size={48} color={colors.textSecondary} />
-      <Text style={styles.emptyTitle}>No Hearings Found</Text>
+      <Text style={styles.emptyTitle}>No Cases with Hearings</Text>
       <Text style={styles.emptyText}>
         {selectedFilter === 'all' 
-          ? 'No hearings scheduled yet' 
-          : `No hearings for ${selectedFilter}`}
+          ? 'No cases have hearings scheduled yet' 
+          : `No cases have hearings for ${selectedFilter}`}
       </Text>
       <Pressable 
         style={styles.addButton}
@@ -112,13 +126,15 @@ export default function HearingsScreen() {
 
   return (
     <View style={commonStyles.container}>
+      <Header title="Hearings" />
+      
       <FlatList
-        data={filteredHearings}
-        renderItem={renderHearing}
+        data={filteredCases}
+        renderItem={renderCaseFolder}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={filteredHearings.length === 0 ? styles.emptyList : undefined}
+        contentContainerStyle={filteredCases.length === 0 ? styles.emptyList : undefined}
         showsVerticalScrollIndicator={false}
       />
       
@@ -133,13 +149,14 @@ export default function HearingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    padding: 16,
+  filtersSection: {
     backgroundColor: colors.backgroundAlt,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    paddingVertical: 16,
   },
   filtersContainer: {
+    paddingHorizontal: 16,
     gap: 8,
   },
   filterButton: {

@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Pressable, TextInput } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Pressable, TextInput, ScrollView } from 'react-native';
 import { router } from 'expo-router';
+import { Header } from '@/components/Header';
+import { CaseFolderCard } from '@/components/CaseFolderCard';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors, commonStyles } from '@/styles/commonStyles';
 import { useCases } from '@/hooks/useCases';
-import { Document, DocumentType } from '@/types';
+import { Case, DocumentType } from '@/types';
 
 export default function DocumentsScreen() {
   const { cases } = useCases();
@@ -22,89 +24,37 @@ export default function DocumentsScreen() {
     { key: 'Other', label: 'Other', color: colors.textSecondary },
   ];
 
-  const getAllDocuments = (): Array<Document & { case: any }> => {
-    return cases.flatMap(caseItem => 
-      caseItem.documents.map(doc => ({ ...doc, case: caseItem }))
+  const getFilteredCases = () => {
+    return cases.filter(caseItem => {
+      const matchesSearch = caseItem.caseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           caseItem.parties.plaintiffs.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           caseItem.parties.defendants.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      const hasDocuments = caseItem.documents.length > 0;
+      
+      const matchesType = selectedType === 'all' || 
+                         caseItem.documents.some(doc => doc.type === selectedType);
+      
+      return matchesSearch && hasDocuments && matchesType;
+    });
+  };
+
+  const filteredCases = getFilteredCases();
+
+  const renderCaseFolder = ({ item }: { item: Case }) => {
+    const documentsCount = selectedType === 'all' 
+      ? item.documents.length 
+      : item.documents.filter(doc => doc.type === selectedType).length;
+      
+    return (
+      <CaseFolderCard
+        case={item}
+        type="documents"
+        count={documentsCount}
+        onPress={() => router.push(`/case-documents/${item.id}?type=${selectedType}`)}
+      />
     );
   };
-
-  const filteredDocuments = getAllDocuments().filter(doc => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         doc.case.caseNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = selectedType === 'all' || doc.type === selectedType;
-    
-    return matchesSearch && matchesType;
-  }).sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-
-  const getDocumentIcon = (type: DocumentType) => {
-    switch (type) {
-      case 'FIR':
-        return 'exclamationmark.triangle.fill';
-      case 'Petition':
-        return 'doc.text.fill';
-      case 'Order':
-        return 'hammer.fill';
-      case 'Judgment':
-        return 'checkmark.seal.fill';
-      case 'Evidence':
-        return 'eye.fill';
-      default:
-        return 'doc.fill';
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const renderDocument = ({ item }: { item: Document & { case: any } }) => (
-    <Pressable 
-      style={[commonStyles.card, styles.documentCard]}
-      onPress={() => router.push(`/document/${item.id}`)}
-    >
-      <View style={styles.documentHeader}>
-        <View style={[styles.documentIcon, { backgroundColor: typeOptions.find(t => t.key === item.type)?.color + '20' }]}>
-          <IconSymbol 
-            name={getDocumentIcon(item.type)} 
-            size={20} 
-            color={typeOptions.find(t => t.key === item.type)?.color || colors.textSecondary} 
-          />
-        </View>
-        <View style={styles.documentInfo}>
-          <Text style={styles.documentName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.caseNumber}>{item.case.caseNumber}</Text>
-        </View>
-        <View style={[styles.typeBadge, { backgroundColor: typeOptions.find(t => t.key === item.type)?.color }]}>
-          <Text style={styles.typeText}>{item.type}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.documentFooter}>
-        <Text style={styles.documentSize}>{formatFileSize(item.size)}</Text>
-        <Text style={styles.uploadDate}>
-          {new Date(item.uploadedAt).toLocaleDateString('en-GB')}
-        </Text>
-      </View>
-      
-      {item.tags.length > 0 && (
-        <View style={styles.tagsContainer}>
-          {item.tags.slice(0, 3).map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ))}
-          {item.tags.length > 3 && (
-            <Text style={styles.moreTagsText}>+{item.tags.length - 3}</Text>
-          )}
-        </View>
-      )}
-    </Pressable>
-  );
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -112,47 +62,53 @@ export default function DocumentsScreen() {
         <IconSymbol name="magnifyingglass" size={20} color={colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search documents..."
+          placeholder="Search cases..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor={colors.textSecondary}
         />
       </View>
       
-      <FlatList
-        horizontal
+      <ScrollView 
+        horizontal 
         showsHorizontalScrollIndicator={false}
-        data={typeOptions}
-        keyExtractor={(item) => item.key}
         contentContainerStyle={styles.filtersContainer}
-        renderItem={({ item }) => (
+      >
+        {typeOptions.map((item) => (
           <Pressable
+            key={item.key}
             style={[
               styles.filterButton,
-              selectedType === item.key && { backgroundColor: item.color + '20', borderColor: item.color }
+              selectedType === item.key && { 
+                backgroundColor: item.color + '20', 
+                borderColor: item.color 
+              }
             ]}
             onPress={() => setSelectedType(item.key)}
           >
             <Text
               style={[
                 styles.filterText,
-                selectedType === item.key && { color: item.color, fontWeight: '600' }
+                selectedType === item.key && { 
+                  color: item.color, 
+                  fontWeight: '600' 
+                }
               ]}
             >
               {item.label}
             </Text>
           </Pressable>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <IconSymbol name="doc.text" size={48} color={colors.textSecondary} />
-      <Text style={styles.emptyTitle}>No Documents Found</Text>
+      <IconSymbol name="folder" size={48} color={colors.textSecondary} />
+      <Text style={styles.emptyTitle}>No Cases with Documents</Text>
       <Text style={styles.emptyText}>
-        {searchQuery ? 'Try adjusting your search criteria' : 'Start by uploading your first document'}
+        {searchQuery ? 'Try adjusting your search criteria' : 'No cases have documents uploaded yet'}
       </Text>
       <Pressable 
         style={styles.addButton}
@@ -166,13 +122,15 @@ export default function DocumentsScreen() {
 
   return (
     <View style={commonStyles.container}>
+      <Header title="Documents" />
+      
       <FlatList
-        data={filteredDocuments}
-        renderItem={renderDocument}
+        data={filteredCases}
+        renderItem={renderCaseFolder}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={filteredDocuments.length === 0 ? styles.emptyList : undefined}
+        contentContainerStyle={filteredCases.length === 0 ? styles.emptyList : undefined}
         showsVerticalScrollIndicator={false}
       />
       
@@ -223,83 +181,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: colors.text,
-  },
-  documentCard: {
-    marginHorizontal: 16,
-  },
-  documentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  documentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  documentInfo: {
-    flex: 1,
-  },
-  documentName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  caseNumber: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  typeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  documentFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  documentSize: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  uploadDate: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  tag: {
-    backgroundColor: colors.grey,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  moreTagsText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
   },
   emptyList: {
     flex: 1,
