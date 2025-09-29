@@ -15,7 +15,7 @@ export default function HearingsScreen() {
   const { cases } = useCases();
   const [selectedFilter, setSelectedFilter] = useState<HearingFilter>('all');
 
-  const filterOptions: Array<{ key: HearingFilter; label: string; color: string }> = [
+  const filterOptions: { key: HearingFilter; label: string; color: string }[] = [
     { key: 'all', label: 'All', color: colors.textSecondary },
     { key: 'today', label: 'Today', color: colors.error },
     { key: 'tomorrow', label: 'Tomorrow', color: colors.warning },

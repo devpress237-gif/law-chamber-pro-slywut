@@ -14,7 +14,7 @@ export default function CasesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<Case['status'] | 'all'>('all');
 
-  const statusOptions: Array<{ key: Case['status'] | 'all'; label: string; color: string }> = [
+  const statusOptions: { key: Case['status'] | 'all'; label: string; color: string }[] = [
     { key: 'all', label: 'All', color: colors.textSecondary },
     { key: 'active', label: 'Active', color: colors.success },
     { key: 'pending', label: 'Pending', color: colors.warning },

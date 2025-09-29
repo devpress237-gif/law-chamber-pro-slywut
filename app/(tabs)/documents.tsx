@@ -14,7 +14,7 @@ export default function DocumentsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<DocumentType | 'all'>('all');
 
-  const typeOptions: Array<{ key: DocumentType | 'all'; label: string; color: string }> = [
+  const typeOptions: { key: DocumentType | 'all'; label: string; color: string }[] = [
     { key: 'all', label: 'All', color: colors.textSecondary },
     { key: 'FIR', label: 'FIR', color: colors.error },
     { key: 'Petition', label: 'Petition', color: colors.primary },

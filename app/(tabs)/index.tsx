@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Header } from '@/components/Header';
@@ -25,11 +25,7 @@ export default function DashboardScreen() {
     recentDocuments: 0,
   });
 
-  useEffect(() => {
-    calculateStats();
-  }, [cases]);
-
-  const calculateStats = () => {
+  const calculateStats = useCallback(() => {
     const totalCases = cases.length;
     const activeCases = cases.filter(c => c.status === 'active').length;
     const todayHearings = getTodayHearings().length;
@@ -45,7 +41,11 @@ export default function DashboardScreen() {
       pendingApprovals,
       recentDocuments,
     });
-  };
+  }, [cases, getTodayHearings, getTomorrowHearings]);
+
+  useEffect(() => {
+    calculateStats();
+  }, [calculateStats]);
 
   const onRefresh = async () => {
     setRefreshing(true);
