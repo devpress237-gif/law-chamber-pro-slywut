@@ -1,10 +1,27 @@
 
-import React from 'react';
-import { Tabs } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Tabs, router } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function TabLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    console.log('TabLayout - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+    
+    if (!isLoading && !isAuthenticated) {
+      console.log('User not authenticated in tabs, redirecting to login');
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Show nothing while loading or if not authenticated
+  if (isLoading || !isAuthenticated) {
+    return null;
+  }
+
   return (
     <Tabs
       screenOptions={{

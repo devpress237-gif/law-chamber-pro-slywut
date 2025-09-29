@@ -28,10 +28,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export const unstable_settings = {
-  initialRouteName: "login",
-};
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
@@ -47,9 +43,13 @@ export default function RootLayout() {
   useEffect(() => {
     // Request notification permissions
     const requestPermissions = async () => {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Notification permissions not granted');
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Notification permissions not granted');
+        }
+      } catch (error) {
+        console.log('Error requesting notification permissions:', error);
       }
     };
     
@@ -97,6 +97,7 @@ export default function RootLayout() {
               headerShown: false,
             }}
           >
+            <Stack.Screen name="index" />
             <Stack.Screen name="login" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen 
