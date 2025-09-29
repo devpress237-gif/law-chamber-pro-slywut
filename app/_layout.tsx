@@ -1,7 +1,8 @@
+
 import "react-native-reanimated";
 import { useEffect } from "react";
 import { useFonts } from "expo-font";
-import { Stack, router } from "expo-router";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -13,13 +14,22 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { Button } from "@/components/button";
+import * as Notifications from 'expo-notifications';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Configure notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export const unstable_settings = {
-  initialRouteName: "(index)",
+  initialRouteName: "login",
 };
 
 export default function RootLayout() {
@@ -34,6 +44,18 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    // Request notification permissions
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Notification permissions not granted');
+      }
+    };
+    
+    requestPermissions();
+  }, []);
+
   if (!loaded) {
     return null;
   }
@@ -42,70 +64,90 @@ export default function RootLayout() {
     ...DefaultTheme,
     dark: false,
     colors: {
-      primary: "rgb(0, 122, 255)", // System Blue
-      background: "rgb(242, 242, 247)", // Light mode background
-      card: "rgb(255, 255, 255)", // White cards/surfaces
-      text: "rgb(0, 0, 0)", // Black text for light mode
-      border: "rgb(216, 216, 220)", // Light gray for separators/borders
-      notification: "rgb(255, 59, 48)", // System Red
+      primary: "#1E40AF",
+      background: "#F8FAFC",
+      card: "#FFFFFF",
+      text: "#1F2937",
+      border: "#D1D5DB",
+      notification: "#EF4444",
     },
   };
 
   const CustomDarkTheme: Theme = {
     ...DarkTheme,
     colors: {
-      primary: "rgb(10, 132, 255)", // System Blue (Dark Mode)
-      background: "rgb(1, 1, 1)", // True black background for OLED displays
-      card: "rgb(28, 28, 30)", // Dark card/surface color
-      text: "rgb(255, 255, 255)", // White text for dark mode
-      border: "rgb(44, 44, 46)", // Dark gray for separators/borders
-      notification: "rgb(255, 69, 58)", // System Red (Dark Mode)
+      primary: "#3B82F6",
+      background: "#111827",
+      card: "#1F2937",
+      text: "#F9FAFB",
+      border: "#374151",
+      notification: "#F87171",
     },
   };
+
   return (
     <>
       <StatusBar style="auto" animated />
-        <ThemeProvider
-          value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
-        >
-          <GestureHandlerRootView>
-            <Stack
-              screenOptions={{
-                headerShown: false,
+      <ThemeProvider
+        value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
+      >
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+            }}
+          >
+            <Stack.Screen name="login" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen 
+              name="add-case" 
+              options={{
+                presentation: "modal",
+                headerShown: true,
+                title: "Add New Case",
               }}
-            >
-              {/* Main app group */}
-              <Stack.Screen name="(index)" />
-
-              {/* Modal Demo Screens */}
-              <Stack.Screen
-                name="modal-demo"
-                options={{
-                  presentation: "modal",
-                  headerShown: true,
-                }}
-              />
-              <Stack.Screen
-                name="formsheet-demo"
-                options={{
-                  presentation: "formSheet",
-                  sheetGrabberVisible: true,
-                  sheetAllowedDetents: [0.5, 0.8, 1.0],
-                  sheetCornerRadius: 20,
-                  headerShown: true,
-                }}
-              />
-              <Stack.Screen
-                name="transparent-modal-demo"
-                options={{
-                  presentation: "transparentModal",
-                  headerShown: false,
-                }}
-              />
-            </Stack>
-            <SystemBars style={"auto"} />
-          </GestureHandlerRootView>
-        </ThemeProvider>
+            />
+            <Stack.Screen 
+              name="add-hearing" 
+              options={{
+                presentation: "modal",
+                headerShown: true,
+                title: "Add Hearing",
+              }}
+            />
+            <Stack.Screen 
+              name="upload-document" 
+              options={{
+                presentation: "modal",
+                headerShown: true,
+                title: "Upload Document",
+              }}
+            />
+            <Stack.Screen 
+              name="case/[id]" 
+              options={{
+                headerShown: true,
+                title: "Case Details",
+              }}
+            />
+            <Stack.Screen 
+              name="hearing/[id]" 
+              options={{
+                headerShown: true,
+                title: "Hearing Details",
+              }}
+            />
+            <Stack.Screen 
+              name="document/[id]" 
+              options={{
+                headerShown: true,
+                title: "Document Details",
+              }}
+            />
+          </Stack>
+          <SystemBars style="auto" />
+        </GestureHandlerRootView>
+      </ThemeProvider>
     </>
   );
 }
